@@ -1,12 +1,28 @@
 # 환경 준비
-- Python 3.14.0 설치, VS Code에 Python·Jupyter 확장 설치
-- 프로젝트 폴더에서 `py -3.14 -m venv .venv` 실행
-- 활성화: `.venv\Scripts\Activate.ps1` 
-- `pip install jupyter ipykernel numpy pyyaml`
+1. Python 3.14.0 설치 
+2. VS Code 또는 PowerShell을 열고 폴더로 이동
+3. 가상 환경 만들기
+
+```powershell
+py -3.14 -m venv .venv
+```
+
+4. 가상 환경 활성화
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+5. 패키지 설치
+
+```powershell
+pip install numpy
+```
 
 # 실행 방법
-1. 노트북 우측 상단 커널을 `.venv`로 선택
-2. 셀을 위에서부터 순서대로 실행
+1. 3번 과정에서 만든 가상 환경을 4번으로 활성화한 상태에서 실행합니다.
+2. 폴더 위치에서 아래 명령을 입력합니다.
 
-# 참고 사항
-- 셀 실행 순서에 따라 변수가 덮어써질 수 있으니, 오류가 나면 커널을 재시작하고 처음부터 실행하세요.
+```powershell
+python assignment01.py
+```
