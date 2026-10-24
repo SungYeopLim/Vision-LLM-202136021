@@ -38,6 +38,7 @@ finger_angle_points = (
     (13, 14, 15),  # 약지: 14번 중심
     (17, 18, 19),  # 소지: 18번 중심
 )
+thumb_ratio = 1.3
 
 hold_seconds = 1.0
 max_lost_frames = 5
@@ -72,6 +73,14 @@ def calculate_angle(p1, p2, p3):
     cosine = np.clip(cosine, -1.0, 1.0)
 
     return np.degrees(np.arccos(cosine))
+
+
+def calculate_distance(p1, p2):
+    return np.linalg.norm(np.array([p1.x - p2.x, p1.y - p2.y, p1.z - p2.z]))
+
+
+def is_thumb_open(hand):
+    return calculate_distance(hand[4], hand[17]) > calculate_distance(hand[5], hand[17]) * thumb_ratio
 
 
 def calculate(a, op, b):
@@ -276,9 +285,11 @@ while True:
     if len(hand_result.hand_landmarks) > 0:
         finger_count = 0
         for hand in hand_result.hand_landmarks:
-            for point1_idx, point2_idx, point3_idx in finger_angle_points:
+            for i, (point1_idx, point2_idx, point3_idx) in enumerate(finger_angle_points):
                 angle = calculate_angle(hand[point1_idx], hand[point2_idx], hand[point3_idx])
                 if angle >= angle_threshold:
+                    if i == 0 and not is_thumb_open(hand):
+                        continue
                     finger_count += 1
 
     # 탐지 결과의 각 손마다 선과 점 그리기
