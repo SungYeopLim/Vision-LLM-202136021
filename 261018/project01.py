@@ -6,7 +6,6 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 
-use_webcam = False
 flip_code = 1
 
 pipeline = (
@@ -151,10 +150,7 @@ kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 1.0
 # Posteriori Error Covariance Matrix (초기 추정 오차 공분산)
 kalman.errorCovPost = np.eye(4, dtype=np.float32)
 
-if use_webcam:
-    cap = cv2.VideoCapture(0)
-else:
-    cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
 
 if not cap.isOpened():
     print("FAIL!")

@@ -24,7 +24,7 @@ Vision-LLM-202136021/
 ### 준비물
 
 - 초록색 탁구공
-- Jetson + USB 카메라(`/dev/video0`) 또는 웹캠이 있는 PC
+- Jetson + USB 카메라(`/dev/video0`)
 - 손 인식 모델 파일 `hand_landmarker.task` (아래 단계에서 다운로드)
 
 ### Jetson
@@ -63,36 +63,6 @@ wget https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landma
 python3 project01.py
 ```
 
-### PC 웹캠 (Windows)
-
-1. 저장소를 내려받고 저장소 폴더로 이동합니다.
-
-```powershell
-git clone https://github.com/SungYeopLim/Vision-LLM-202136021.git
-cd Vision-LLM-202136021
-```
-
-2. 가상 환경을 만들고 활성화한 뒤 패키지를 설치합니다.
-
-```powershell
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install numpy opencv-python mediapipe
-```
-
-3. `261018` 폴더로 이동한 뒤 손 인식 모델을 다운로드합니다.
-
-```powershell
-cd 261018
-Invoke-WebRequest https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task -OutFile ../src/models/MediaPipe/hand_landmarker.task
-```
-
-4. `project01.py` 상단의 `use_webcam = False`를 `True`로 바꾼 뒤, `261018` 폴더 위치에서 실행합니다.
-
-```powershell
-python project01.py
-```
-
 ### 조작 방법
 
 | 입력 | 방법 |
@@ -115,6 +85,7 @@ python project01.py
 | `green_lower`, `green_upper` | 공 LAB 범위 | `m`으로 마스크를 보며 공만 흰색이 되도록 |
 | `min_ball_area` | 공으로 인정할 최소 면적 | 작은 노이즈가 버튼을 누를 때 |
 | `angle_threshold` | 손가락 펼침 판단 각도 (기본 160) | 손가락 개수가 자주 틀릴 때 |
+| `thumb_ratio` | 엄지 펼침 판단 거리 비율 (기본 1.3) | 주먹에서 1이 나오면 올리고, 엄지를 폈는데 안 세어지면 내림 |
 | `hold_seconds` | 입력 확정 시간 | 너무 느리거나 오입력이 많을 때 |
 | `speed_threshold` | 숫자 입력을 멈출 공 속도 (px/frame) | 공을 옮길 때 숫자가 입력될 때 |
 | `flip_code` | `1` 좌우 반전(거울), `0` 상하 반전, `None` 반전 없음 | 카메라 방향에 맞게 |
@@ -144,7 +115,7 @@ python project01.py
 | Morphological Operation | Opening 2회 → Closing 1회 | 오토바이·농구공 마스크 실습 |
 | Contour 검출 | `findContours` → 가장 큰 contour → `minEnclosingCircle`, moments 무게중심 | 농구공 외접원/무게중심 실습 |
 | 객체 추적 | `cv2.KalmanFilter` (상태 `[x, y, vx, vy]`) | 실시간 객체 추적 |
-| 신체 인식 | MediaPipe HandLandmarker + 관절 각도 규칙으로 손가락 개수 |  MediaPipe, Rule-based 손가락 개수 |
+| 신체 인식 | MediaPipe HandLandmarker + 관절 각도 규칙으로 손가락 개수 (엄지는 거리 조건 추가) |  MediaPipe, Rule-based 손가락 개수 |
 
 새로 작성한 부분은 아래 규칙 로직입니다.
 
@@ -165,9 +136,9 @@ python project01.py
 
 - 공 LAB 범위는 수업 중 검증한 탁구공 실시간 검출 코드의 값을 그대로 사용했습니다. 강의실 조명에 따라 조정이 필요할 수 있습니다.
 - CLAHE는 L 채널(밝기)을 바꾸기 때문에, CLAHE 없이 맞춘 LAB 범위와 결과가 달라질 수 있습니다. 그래서 기본값은 꺼 두고, 조명이 어두울 때 `e` 키로 켜서 `m` 키의 마스크 창으로 두 결과를 비교한 뒤 더 깨끗한 쪽을 사용합니다.
-- 엄지는 관절 각도 규칙으로 판단하기가 다른 손가락보다 부정확해서, 손가락 개수가 1개씩 틀어질 수 있습니다. 엄지를 확실히 펴거나 접어서 입력하면 안정적입니다.
+- 엄지는 주먹을 쥐어도 관절이 거의 굽지 않아 각도 규칙만으로는 펴진 것으로 잘못 세어졌습니다. 그래서 엄지에는 각도 조건에 더해, 엄지 끝(4번)과 새끼 뿌리(17번) 사이 거리가 검지 뿌리(5번)와 17번 사이 거리의 `thumb_ratio`배(기본 1.3)보다 클 때만 펴진 것으로 보는 거리 조건을 추가했습니다. 손 크기 대비 비율로 비교하므로 손과 카메라 사이 거리가 달라도 같은 기준이 적용됩니다.
 - 양손이 겹치면 손 인식이 불안정해지므로 양손을 떨어뜨려 입력합니다.
-- 함수(`def`)는 실습에 있던 `calculate_angle` 외에, 같은 사칙연산 코드가 두 곳에서 필요해 `calculate`와 숫자 표시용 `format_number`만 추가했습니다. 나머지는 실습 코드처럼 위에서 아래로 이어지는 구조입니다.
+- 함수(`def`)는 실습에 있던 `calculate_angle` 외에, 같은 사칙연산 코드가 두 곳에서 필요해 `calculate`와 숫자 표시용 `format_number`, 엄지 판정용 `calculate_distance`와 `is_thumb_open`만 추가했습니다. 나머지는 실습 코드처럼 위에서 아래로 이어지는 구조입니다.
 - AI 활용 vs. 본인 기여도
   - AI 활용: Claude를 사용해 예제 코드들을 정리하고 하나로 합쳤으며, 공의 위치를 이용해 사칙연산을 수행하는 아이디어에 도움을 받았습니다.
   - 본인 기여: 프로젝트 아이디어를 생성하고, 코드 가독성을 점검했습니다.
