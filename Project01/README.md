@@ -12,7 +12,7 @@
 
 ```
 Vision-LLM-202136021/
-└── 261018/
+└── Project01/
     ├── project01.py
     └── README.md
 ```
@@ -50,14 +50,14 @@ pip install --no-deps mediapipe
 pip install absl-py flatbuffers sounddevice
 ```
 
-4. `261018` 폴더로 이동한 뒤 손 인식 모델을 `src/models/MediaPipe/` 폴더에 다운로드합니다.
+4. `Project01` 폴더로 이동한 뒤 손 인식 모델을 `src/models/MediaPipe/` 폴더에 다운로드합니다.
 
 ```bash
-cd 261018
+cd Project01
 wget https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task -O ../src/models/MediaPipe/hand_landmarker.task
 ```
 
-5. 모델 경로가 `../src/...` 상대 경로이므로, 가상 환경을 활성화한 상태로 `261018` 폴더 위치에서 아래 명령을 입력합니다.
+5. 모델 경로가 `../src/...` 상대 경로이므로, 가상 환경을 활성화한 상태로 `Project01` 폴더 위치에서 아래 명령을 입력합니다.
 
 ```bash
 python3 project01.py
