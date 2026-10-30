@@ -40,7 +40,7 @@ cd Vision-LLM-202136021
 
 ```bash
 python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
+source .venv/bin/activate 
 ```
 
 3. MediaPipe를 설치합니다. `--no-deps`는 JetPack의 OpenCV와 NumPy를 덮어쓰지 않기 위한 옵션이며, 필요한 의존성은 두 번째 줄에서 따로 설치합니다.
