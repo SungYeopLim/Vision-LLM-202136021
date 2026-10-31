@@ -2,3 +2,5 @@
 __pycache__/
 .ipynb_checkpoints/
 src/models/**
+src/datasets/cifar-10-batches-py/
+src/datasets/cifar-10-python.tar.gz
