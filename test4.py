@@ -3,11 +3,10 @@ import cv2
 import time
 
 
-model = YOLO("src/models/YOLO/yolo11n.pt")
-model.to("cuda")
+model = YOLO("src/models/YOLO/yolo11n_int8.engine")
 
 pipeline = (
-    "v4l2src device=/dev/video0 ! "
+    "v4l2src device=/dev/video1 ! "
     "video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 ! "
     "videoconvert ! video/x-raw,format=BGR ! "
     "queue leaky=downstream max-size-buffers=1 "
