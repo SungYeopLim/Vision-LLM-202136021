@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import subprocess
@@ -5,9 +6,11 @@ import time
 from datetime import datetime
 
 from llama_cpp import Llama
+from llama_cpp.llama_chat_format import Gemma4ChatHandler
 
 
 GEMMA_MODEL_PATH = "../src/models/Gemma4/google_gemma-4-E2B-it-Q4_K_M.gguf"
+MMPROJ_PATH = "../src/models/Gemma4/mmproj-google_gemma-4-E2B-it-f16.gguf"
 EVENT_JSON_PATH = "../src/json/review_event.json"
 REVIEW_DIR = "../src/output/reviews"
 
@@ -25,14 +28,8 @@ CONTEXT_WINDOW = 2048
 LABEL_TOKENS = 10     # 라벨, 별점 최대 토큰
 REVIEW_TOKENS = 300   # 리뷰 문장 최대 토큰
 CLAIM_RATING = 2      # 이 별점 이하면 클레임 후보
-
-# 구매처별 리뷰 최소 글자 수 (예시값, 실제 기준은 각 쇼핑몰 안내 확인)
-MIN_CHARS = {
-    "coupang": 30,
-    "naver": 30,
-    "musinsa": 30,
-    "kurly": 30,
-}
+MIN_SPEECH_CHARS = 15 # 구매자 발화가 이 글자 수보다 짧으면 추가 질문
+MIN_CHARS = 30        # 리뷰 최소 글자 수 (예시값)
 
 # 카테고리별 첫 질문
 QUESTIONS = {
@@ -42,12 +39,12 @@ QUESTIONS = {
     "fashion": "{name} 사진을 저장했어요. 색상이나 소재는 어떤가요?",
 }
 
-# 리뷰가 최소 글자 수보다 짧을 때 추가 질문
+# 구매자 발화가 짧을 때 추가 질문
 FOLLOW_UPS = {
-    "food": "리뷰가 조금 짧아요. 맛, 양, 포장 중에 더 말씀하실 부분이 있나요?",
-    "living": "리뷰가 조금 짧아요. 크기, 무게, 마감 중에 더 말씀하실 부분이 있나요?",
-    "electronics": "리뷰가 조금 짧아요. 외관, 구성품, 처음 써 본 느낌 중에 더 말씀하실 부분이 있나요?",
-    "fashion": "리뷰가 조금 짧아요. 사이즈, 소재, 색상 중에 더 말씀하실 부분이 있나요?",
+    "food": "조금 더 자세히 말씀해 주세요. 맛, 양, 포장 중에 더 말씀하실 부분이 있나요?",
+    "living": "조금 더 자세히 말씀해 주세요. 크기, 무게, 마감 중에 더 말씀하실 부분이 있나요?",
+    "electronics": "조금 더 자세히 말씀해 주세요. 외관, 구성품, 처음 써 본 느낌 중에 더 말씀하실 부분이 있나요?",
+    "fashion": "조금 더 자세히 말씀해 주세요. 사이즈, 소재, 색상 중에 더 말씀하실 부분이 있나요?",
 }
 
 
@@ -136,29 +133,62 @@ def ask_gemma(system_prompt, user_prompt, max_tokens, temperature):
     return response["choices"][0]["message"]["content"].strip()
 
 
-# 구매자 발화 → 리뷰 문장
-def write_review(product, speech):
-    return ask_gemma(
-        """
-        Instruction:
-        구매자가 말한 내용을 구매자가 직접 작성한 상품 리뷰 문장으로 정리하시오.
+# 구매자 발화 + 상품 사진 → 리뷰 문장
+def write_review(product, speech, image_path):
+    # 이미지 파일 읽기
+    with open(image_path, "rb") as file:
+        image_bytes = file.read()
 
-        Constraint:
-        구매자가 말한 내용과 상품명만 사용하시오.
-        구매자가 말한 내용은 빠짐없이 포함하고, 줄이지 마시오.
-        구매자가 말하지 않은 칭찬, 특징, 경험을 추가하지 마시오.
-        이모지, 마크다운, 특수 기호를 사용하지 마시오.
+    # 이미지 Base64 인코딩
+    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+    image_data = "data:image/jpeg;base64," + image_base64
 
-        Output Format:
-        존댓말 한국어 문장.
-        """,
-        f"""
-        상품명: {product['name']}
-        구매자 발화: {speech}
-        """,
-        REVIEW_TOKENS,
-        0.7,
+    # 이미지와 텍스트를 Gemma에 전달
+    response = llm.create_chat_completion(
+        messages=[
+            {
+                "role": "system",
+                "content": """
+                            Instruction:
+                            구매자가 말한 내용과 상품 사진을 바탕으로
+                            쇼핑몰에 올릴 상품 리뷰를 구매자 입장에서 작성하시오.
+
+                            Constraint:
+                            구매자가 말한 내용은 빠짐없이 포함하고, 자연스럽게 풀어서 자세히 쓰시오.
+                            사진에서 확인되는 외관, 색상, 포장 상태를 함께 묘사하시오.
+                            구매자의 평가 방향에 맞는 감상과 추천 문장을 덧붙여도 됩니다.
+                            구매자가 부정적으로 말한 내용은 그대로 부정적으로 쓰시오.
+                            수치, 기능, 사용 기간처럼 확인되지 않은 구체적인 사실은 지어내지 마시오.
+                            이모지, 마크다운, 특수 기호를 사용하지 마시오.
+
+                            Output Format:
+                            존댓말 한국어 3~5문장.
+                           """
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"상품명: {product['name']}\n"
+                            f"구매자 발화: {speech}"
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_data
+                        },
+                    },
+                ],
+            }
+        ],
+        max_tokens=REVIEW_TOKENS,
+        temperature=0.7,
     )
+
+    return response["choices"][0]["message"]["content"].strip()
 
 
 # 구매자 발화 → 긍정 / 부정 / 없음
@@ -256,7 +286,6 @@ def save_review(event, speech, label, rating, review, status, claim_candidate, m
     record = {
         "event_id": event["event_id"],
         "product_name": product["name"],
-        "platform": product["platform"],
         "category": product["category"],
         "detected_class": event["class"],
         "confidence": event["confidence"],
@@ -280,15 +309,18 @@ def save_review(event, speech, label, rating, review, status, claim_candidate, m
     return review_path
 
 
-for path in (GEMMA_MODEL_PATH, WHISPER_PATH, WHISPER_MODEL, PIPER_PYTHON, PIPER_MODEL):
+for path in (GEMMA_MODEL_PATH, MMPROJ_PATH, WHISPER_PATH, WHISPER_MODEL, PIPER_PYTHON, PIPER_MODEL):
     if not os.path.exists(path):
         print(f"파일을 찾을 수 없습니다: {path}")
         exit()
 
 os.makedirs(REVIEW_DIR, exist_ok=True)
 
+chat_handler = Gemma4ChatHandler(clip_model_path=MMPROJ_PATH)
+
 llm = Llama(
     model_path=GEMMA_MODEL_PATH,
+    chat_handler=chat_handler,
     n_gpu_layers=-1,
     n_ctx=CONTEXT_WINDOW,
     n_batch=32,
@@ -323,9 +355,9 @@ while True:
 
                 product = event["product"]
                 category = product["category"]
-                min_chars = MIN_CHARS[product["platform"]]
+                min_chars = MIN_CHARS
 
-                print(f"\n[촬영 이벤트] {event['event_id']} → {product['name']} ({product['platform']}, 최소 {min_chars}자)")
+                print(f"\n[촬영 이벤트] {event['event_id']} → {product['name']} ({category})")
 
                 # 2. 카테고리별 질문 → 음성 입력
                 text_to_speech(QUESTIONS[category].format(name=product["name"]))
@@ -341,12 +373,8 @@ while True:
                 if speech == "":
                     print("음성이 인식되지 않았습니다.")
                 else:
-                    # 3. 리뷰 작성
-                    review = write_review(product, speech)
-                    print(f"\n[Gemma 리뷰] {review}")
-
-                    # 4. 최소 글자 수보다 짧으면 추가 질문 후 다시 작성
-                    if len(review) < min_chars:
+                    # 3. 발화가 짧으면 추가 질문 후 두 답변 합치기
+                    if len(speech) < MIN_SPEECH_CHARS:
                         text_to_speech(FOLLOW_UPS[category])
 
                         print(f"말씀해 주세요. ({RECORD_SECONDS}초)")
@@ -355,8 +383,10 @@ while True:
 
                         if more_speech != "":
                             speech = speech + " " + more_speech
-                            review = write_review(product, speech)
-                            print(f"\n[Gemma 리뷰] {review}")
+
+                    # 4. 발화 + 상품 사진으로 리뷰 작성
+                    review = write_review(product, speech, event["image_path"])
+                    print(f"\n[Gemma 리뷰] {review}")
 
                     # 5. 라벨 분류, 별점
                     label = classify_label(speech)

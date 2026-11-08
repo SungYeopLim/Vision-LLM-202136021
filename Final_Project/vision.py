@@ -19,14 +19,14 @@ HOLD_SECONDS = 2.0           # 촬영 영역 안에 머물러야 하는 시간
 MAX_LOST_FRAMES = 5          # 탐지가 끊겨도 유지 시간을 이어갈 프레임 수
 RESET_LOST_FRAMES = 30       # 촬영 후 다음 촬영을 허용할 빈 영역 프레임 수
 
-# 주문 목록: YOLO 클래스 → 상품명, 구매처, 카테고리
+# 주문 목록: YOLO 클래스 → 상품명, 카테고리
 ORDER_ITEMS = {
-    "bottle": {"name": "탄산음료 500ml", "platform": "coupang", "category": "food"},
-    "cell phone": {"name": "스마트폰", "platform": "naver", "category": "electronics"},
-    "mouse": {"name": "무선 마우스", "platform": "coupang", "category": "electronics"},
-    "backpack": {"name": "데일리 백팩", "platform": "musinsa", "category": "fashion"},
-    "book": {"name": "파이썬 입문서", "platform": "naver", "category": "living"},
-    "orange": {"name": "제주 감귤 1kg", "platform": "kurly", "category": "food"},
+    "bottle": {"name": "탄산음료 500ml", "category": "food"},
+    "cell phone": {"name": "스마트폰", "category": "electronics"},
+    "mouse": {"name": "무선 마우스", "category": "electronics"},
+    "backpack": {"name": "데일리 백팩", "category": "fashion"},
+    "book": {"name": "파이썬 입문서", "category": "living"},
+    "orange": {"name": "제주 감귤 1kg", "category": "food"},
 }
 
 
