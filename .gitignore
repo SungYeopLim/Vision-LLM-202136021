@@ -4,3 +4,6 @@ __pycache__/
 src/models/**
 src/datasets/cifar-10-batches-py/
 src/datasets/cifar-10-python.tar.gz
+src/datasets/MNIST/
+src/models/MediaPipe/*.task
+.env
