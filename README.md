@@ -1,6 +1,6 @@
 # Vision-LLM-202136021
 
-**Physical AI: Vision-LLM 멀티모달 시스템 실습** — 202136021 임성엽
+**Vision-LLM** — 202136021 임성엽
 
 Jetson Orin Nano에서 Computer Vision, 딥러닝, YOLO 객체 탐지, LLM(Gemma)을 차례로 실습하고, 마지막에 이를 하나로 묶은 온디바이스 멀티모달 시스템을 만든 저장소입니다.
 
@@ -46,7 +46,6 @@ Vision-LLM-202136021/
 | `04_DL-Object-Detection.ipynb` | Bounding Box, IoU, NMS, YOLO 탐지와 TensorRT 변환 |
 | `05-LLM_and_Gemma.ipynb` | Hugging Face, Access Token 관리, Gemma 텍스트 생성 |
 | `06-Vision_LLM_Multimodal_Systems.ipynb` | YOLO 탐지 결과 → JSON → 자연어 → Gemma로 잇는 Vision-LLM 파이프라인 |
-| `[ANSWER]_06-Vision_LLM_Multimodal_Systems.ipynb` | 06 노트북의 실습 문제를 직접 채운 버전 |
 
 ### 과제와 프로젝트
 
